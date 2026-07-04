@@ -9,11 +9,27 @@ import {
 import EditIcon from '@mui/icons-material/Edit';
 import ArchiveIcon from '@mui/icons-material/Archive';
 import LockIcon from '@mui/icons-material/Lock';
+import CheckIcon from '@mui/icons-material/Check';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import MarkEmailUnreadIcon from '@mui/icons-material/MarkEmailUnread';
 import IntranetShell from '@/components/IntranetShell';
 import AccesRefuse from '@/components/AccesRefuse';
 import { apiGet, apiPatch, apiPost, apiBase, ApiError } from '@/lib/api';
 import { useAuth } from '@/lib/AuthContext';
 import { COLORS, TRICOLOR } from '@/theme';
+
+// Carte de panneau (coins arrondis + ombre douce).
+const CARTE = { border: `1px solid ${COLORS.border}`, borderRadius: 3, boxShadow: '0 8px 22px rgba(0,40,80,0.06)' };
+
+// Titre de panneau avec petit accent tricolore.
+function TitrePanneau({ children }) {
+  return (
+    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
+      <Box sx={{ width: 22, height: 4, borderRadius: 2, background: TRICOLOR }} />
+      <Typography sx={{ fontWeight: 800, color: COLORS.blue, fontSize: '0.98rem' }}>{children}</Typography>
+    </Box>
+  );
+}
 
 function Ligne({ label, valeur }) {
   return (
@@ -28,6 +44,16 @@ function Ligne({ label, valeur }) {
 
 function horodate(iso) {
   try { return new Date(iso).toLocaleString('fr-FR'); } catch { return iso; }
+}
+
+// Première imputation EN_ATTENTE_ACCUSE ciblant la direction de l'utilisateur.
+function trouverAccusable(imps, directionId) {
+  for (const i of imps || []) {
+    if (i.statut === 'EN_ATTENTE_ACCUSE' && i.direction_cible.id === directionId) return i;
+    const sous = trouverAccusable(i.sous_imputations, directionId);
+    if (sous) return sous;
+  }
+  return null;
 }
 
 function NoeudImputation({ imp, niveau }) {
@@ -53,7 +79,12 @@ function NoeudImputation({ imp, niveau }) {
 export default function FicheCourrier() {
   const { id } = useParams();
   const router = useRouter();
-  const { loading, has } = useAuth();
+  const { loading, has, utilisateur } = useAuth();
+  // Lecture autorisée pour toute permission courrier (le backend applique la
+  // visibilité fine : large pour les rôles centraux, directionnelle pour les
+  // secrétariats). Un 404 signale un courrier hors périmètre.
+  const peutVoir = has('courrier.consulter_courrier') || has('courrier.accuser_reception')
+    || has('courrier.imputer_sous_arbre') || has('courrier.imputer_premier_niveau');
 
   const [courrier, setCourrier] = useState(null);
   const [erreur, setErreur] = useState('');
@@ -73,7 +104,16 @@ export default function FicheCourrier() {
     }
   }, [id]);
 
-  useEffect(() => { if (has('courrier.consulter_courrier')) charger(); }, [has, charger]);
+  useEffect(() => { if (peutVoir) charger(); }, [peutVoir, charger]);
+
+  async function accuserImputation(impId) {
+    try {
+      await apiPost(`/api/v1/imputations/${impId}/accuser/`);
+      await charger();
+    } catch (e) {
+      setErreur(e instanceof ApiError && e.data?.detail ? e.data.detail : "Échec de l'accusé de réception.");
+    }
+  }
 
   function ouvrirModif() {
     setErrModif('');
@@ -124,7 +164,7 @@ export default function FicheCourrier() {
   if (loading) {
     return <IntranetShell><Box sx={{ textAlign: 'center', mt: 8 }}><CircularProgress /></Box></IntranetShell>;
   }
-  if (!has('courrier.consulter_courrier')) {
+  if (!peutVoir) {
     return <IntranetShell><AccesRefuse message="La consultation du courrier requiert une autorisation." /></IntranetShell>;
   }
   if (erreur) {
@@ -136,17 +176,27 @@ export default function FicheCourrier() {
 
   const peutModifier = has('courrier.modifier_courrier');
   const peutClasser = has('courrier.classer_courrier') && courrier.statut === 'ENREGISTRE';
+  // Imputation en attente d'accusé ciblant la direction de l'utilisateur.
+  const accusable = has('courrier.accuser_reception') && utilisateur?.direction
+    ? trouverAccusable(courrier.imputations, utilisateur.direction.id) : null;
 
   return (
     <IntranetShell>
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2, flexWrap: 'wrap' }}>
-        <Button onClick={() => router.push('/courrier')} sx={{ color: COLORS.blue }}>← Retour</Button>
-        <Typography variant="h5" sx={{ fontWeight: 800, color: COLORS.blue }}>{courrier.numero_ordre}</Typography>
+      <Button onClick={() => router.push('/courrier')} startIcon={<ArrowBackIcon />}
+        sx={{ color: COLORS.blue, fontWeight: 700, borderRadius: 999, mb: 1.5 }}>Retour au courrier</Button>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, mb: 2.5, flexWrap: 'wrap' }}>
+        <Box sx={{ width: 42, height: 42, borderRadius: 2, backgroundColor: `${COLORS.blue}14`, color: COLORS.blue,
+          display: 'flex', alignItems: 'center', justifyContent: 'center', '& svg': { fontSize: 24 } }}>
+          <MarkEmailUnreadIcon />
+        </Box>
+        <Typography component="h1" sx={{ fontWeight: 800, color: COLORS.blue, fontSize: { xs: '1.5rem', md: '1.8rem' } }}>
+          {courrier.numero_ordre}
+        </Typography>
         <Chip label={courrier.statut_libelle} size="small"
-          sx={{ backgroundColor: `${COLORS.blue}14`, color: COLORS.blue, fontWeight: 700 }} />
+          sx={{ backgroundColor: `${COLORS.blue}14`, color: COLORS.blue, fontWeight: 700, borderRadius: 1.5 }} />
         {courrier.confidentialite === 'CONFIDENTIEL' && (
           <Chip icon={<LockIcon />} label="Confidentiel" size="small"
-            sx={{ backgroundColor: `${COLORS.orange}1f`, color: COLORS.orange, fontWeight: 700 }} />
+            sx={{ backgroundColor: `${COLORS.orange}1f`, color: COLORS.orange, fontWeight: 700, borderRadius: 1.5 }} />
         )}
         <Box sx={{ flex: 1 }} />
         {peutModifier && <Button startIcon={<EditIcon />} onClick={ouvrirModif} variant="outlined" sx={{ fontWeight: 700 }}>Modifier</Button>}
@@ -156,7 +206,7 @@ export default function FicheCourrier() {
       <Grid container spacing={2}>
         {/* Visionneuse PDF */}
         <Grid size={{ xs: 12, md: 7 }}>
-          <Paper elevation={0} sx={{ border: `1px solid ${COLORS.border}`, borderRadius: 2, overflow: 'hidden', height: { xs: 420, md: '72vh' } }}>
+          <Paper elevation={0} sx={{ ...CARTE, overflow: 'hidden', height: { xs: 420, md: '72vh' } }}>
             {courrier.a_scan ? (
               <Box component="iframe" title="Scan du courrier"
                 src={`${apiBase()}/api/v1/courriers/${courrier.id}/scan/`}
@@ -169,7 +219,8 @@ export default function FicheCourrier() {
 
         {/* Métadonnées + chronologie */}
         <Grid size={{ xs: 12, md: 5 }}>
-          <Paper elevation={0} sx={{ p: 2.5, border: `1px solid ${COLORS.border}`, borderRadius: 2, mb: 2 }}>
+          <Paper elevation={0} sx={{ ...CARTE, p: 2.5, mb: 2 }}>
+            <TitrePanneau>Informations</TitrePanneau>
             <Ligne label="Correspondant" valeur={courrier.correspondant.nom} />
             <Ligne label="Objet" valeur={courrier.objet} />
             <Grid container spacing={1}>
@@ -184,8 +235,15 @@ export default function FicheCourrier() {
             </Typography>
           </Paper>
 
-          <Paper elevation={0} sx={{ p: 2.5, border: `1px solid ${COLORS.border}`, borderRadius: 2, mb: 2 }}>
-            <Typography sx={{ fontWeight: 800, color: COLORS.blue, mb: 1 }}>Circuit</Typography>
+          <Paper elevation={0} sx={{ ...CARTE, p: 2.5, mb: 2 }}>
+            <TitrePanneau>Circuit</TitrePanneau>
+            {accusable && (
+              <Button fullWidth size="small" variant="contained" startIcon={<CheckIcon />}
+                onClick={() => accuserImputation(accusable.id)}
+                sx={{ mb: 1.5, backgroundColor: COLORS.green, fontWeight: 700, '&:hover': { backgroundColor: COLORS.greenDark } }}>
+                Accuser réception ({accusable.direction_cible.sigle})
+              </Button>
+            )}
             {(courrier.imputations || []).length === 0 ? (
               <Typography sx={{ color: COLORS.muted, fontSize: '0.85rem' }}>Courrier pas encore imputé.</Typography>
             ) : (
@@ -193,8 +251,8 @@ export default function FicheCourrier() {
             )}
           </Paper>
 
-          <Paper elevation={0} sx={{ p: 2.5, border: `1px solid ${COLORS.border}`, borderRadius: 2 }}>
-            <Typography sx={{ fontWeight: 800, color: COLORS.blue, mb: 1.5 }}>Chronologie</Typography>
+          <Paper elevation={0} sx={{ ...CARTE, p: 2.5 }}>
+            <TitrePanneau>Chronologie</TitrePanneau>
             {courrier.evenements.map((e, i) => (
               <Box key={e.id} sx={{ display: 'flex', gap: 1.5 }}>
                 <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', pt: 0.4 }}>

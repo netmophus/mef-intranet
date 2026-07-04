@@ -4,27 +4,28 @@ import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Box, Typography, Paper, Table, TableHead, TableBody, TableRow, TableCell, TableContainer,
-  TextField, MenuItem, Chip, InputAdornment, IconButton, Pagination, Tooltip, CircularProgress,
+  TextField, MenuItem, Chip, InputAdornment, Pagination, Tooltip, CircularProgress,
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import LockIcon from '@mui/icons-material/Lock';
+import MarkEmailUnreadIcon from '@mui/icons-material/MarkEmailUnread';
 import IntranetShell from '@/components/IntranetShell';
 import AccesRefuse from '@/components/AccesRefuse';
 import { apiGet } from '@/lib/api';
 import { useAuth } from '@/lib/AuthContext';
-import { COLORS } from '@/theme';
+import { COLORS, TRICOLOR } from '@/theme';
 
 const STATUT_COULEUR = {
   ENREGISTRE: { c: COLORS.blue, bg: `${COLORS.blue}14` },
   CLASSE: { c: COLORS.muted, bg: '#0000000d' },
-  IMPUTE: { c: COLORS.gold, bg: `${COLORS.gold}22` },
+  IMPUTE: { c: COLORS.goldDark, bg: `${COLORS.gold}22` },
   EN_TRAITEMENT: { c: COLORS.orange, bg: `${COLORS.orange}1f` },
-  TRAITE: { c: COLORS.green, bg: `${COLORS.green}1f` },
+  TRAITE: { c: COLORS.greenDark, bg: `${COLORS.green}1f` },
 };
 
 function ChipStatut({ statut, libelle }) {
   const s = STATUT_COULEUR[statut] || STATUT_COULEUR.ENREGISTRE;
-  return <Chip label={libelle} size="small" sx={{ backgroundColor: s.bg, color: s.c, fontWeight: 700 }} />;
+  return <Chip label={libelle} size="small" sx={{ backgroundColor: s.bg, color: s.c, fontWeight: 700, borderRadius: 1.5 }} />;
 }
 
 export default function ListeCourrier() {
@@ -78,18 +79,34 @@ export default function ListeCourrier() {
 
   return (
     <IntranetShell>
-      <Typography variant="h5" sx={{ fontWeight: 800, color: COLORS.blue, mb: 2 }}>
-        Courrier arrivée
-      </Typography>
+      {/* En-tête */}
+      <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 2, mb: 2.5 }}>
+        <Box>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.3 }}>
+            <Box sx={{ width: 40, height: 40, borderRadius: 2, backgroundColor: `${COLORS.blue}14`, color: COLORS.blue,
+              display: 'flex', alignItems: 'center', justifyContent: 'center', '& svg': { fontSize: 24 } }}>
+              <MarkEmailUnreadIcon />
+            </Box>
+            <Typography component="h1" sx={{ fontWeight: 800, color: COLORS.blue, fontSize: { xs: '1.4rem', md: '1.7rem' } }}>
+              Courrier arrivée
+            </Typography>
+          </Box>
+          <Box sx={{ width: 64, height: 4, borderRadius: 2, background: TRICOLOR, mt: 1.2, ml: 0.2 }} />
+        </Box>
+        <Chip
+          label={`${data.count} courrier${data.count > 1 ? 's' : ''}`}
+          sx={{ backgroundColor: '#fff', border: `1px solid ${COLORS.border}`, fontWeight: 700, color: COLORS.ink, alignSelf: 'center' }}
+        />
+      </Box>
 
       {/* Filtres */}
-      <Paper elevation={0} sx={{ p: 2, mb: 2, border: `1px solid ${COLORS.border}`, borderRadius: 2,
-        display: 'flex', gap: 1.5, flexWrap: 'wrap' }}>
+      <Paper elevation={0} sx={{ p: 2, mb: 2.5, border: `1px solid ${COLORS.border}`, borderRadius: 3,
+        boxShadow: '0 8px 22px rgba(0,40,80,0.05)', display: 'flex', gap: 1.5, flexWrap: 'wrap' }}>
         <TextField
           size="small" placeholder="Rechercher (numéro, objet, correspondant)…" value={q}
           onChange={(e) => setQ(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter') { setPage(1); setQActif(q); } }}
-          sx={{ flex: 1, minWidth: 240 }}
+          sx={{ flex: 1, minWidth: 240, '& .MuiOutlinedInput-root': { borderRadius: 999 } }}
           slotProps={{ input: { startAdornment: (
             <InputAdornment position="start"><SearchIcon sx={{ color: COLORS.muted }} /></InputAdornment>
           ) } }}
@@ -107,14 +124,13 @@ export default function ListeCourrier() {
         </TextField>
       </Paper>
 
-      <Typography sx={{ color: COLORS.muted, fontSize: '0.85rem', mb: 1 }}>
-        {data.count} courrier{data.count > 1 ? 's' : ''}
-      </Typography>
-
-      <TableContainer component={Paper} elevation={0} sx={{ border: `1px solid ${COLORS.border}`, borderRadius: 2 }}>
-        <Table size="small">
+      <TableContainer component={Paper} elevation={0}
+        sx={{ border: `1px solid ${COLORS.border}`, borderRadius: 3, overflow: 'hidden',
+          boxShadow: '0 8px 22px rgba(0,40,80,0.06)' }}>
+        <Table>
           <TableHead>
-            <TableRow sx={{ '& th': { fontWeight: 800, color: COLORS.blue, backgroundColor: COLORS.bg } }}>
+            <TableRow sx={{ '& th': { fontWeight: 800, color: COLORS.blueDark, backgroundColor: '#f2f6fb',
+              borderBottom: `2px solid ${COLORS.border}`, fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: 0.3 } }}>
               <TableCell>Numéro</TableCell>
               <TableCell>Arrivée</TableCell>
               <TableCell>Correspondant</TableCell>
@@ -125,17 +141,19 @@ export default function ListeCourrier() {
           </TableHead>
           <TableBody>
             {chargement ? (
-              <TableRow><TableCell colSpan={6} align="center" sx={{ py: 4 }}><CircularProgress size={26} /></TableCell></TableRow>
+              <TableRow><TableCell colSpan={6} align="center" sx={{ py: 5 }}><CircularProgress size={26} /></TableCell></TableRow>
             ) : erreur ? (
-              <TableRow><TableCell colSpan={6} align="center" sx={{ py: 4, color: COLORS.orange }}>{erreur}</TableCell></TableRow>
+              <TableRow><TableCell colSpan={6} align="center" sx={{ py: 5, color: COLORS.orange, fontWeight: 600 }}>{erreur}</TableCell></TableRow>
             ) : data.results.length === 0 ? (
-              <TableRow><TableCell colSpan={6} align="center" sx={{ py: 4, color: COLORS.muted }}>Aucun courrier.</TableCell></TableRow>
+              <TableRow><TableCell colSpan={6} align="center" sx={{ py: 5, color: COLORS.muted }}>Aucun courrier.</TableCell></TableRow>
             ) : data.results.map((c) => (
-              <TableRow key={c.id} hover onClick={() => router.push(`/courrier/${c.id}`)} sx={{ cursor: 'pointer' }}>
-                <TableCell sx={{ fontWeight: 700, whiteSpace: 'nowrap' }}>{c.numero_ordre}</TableCell>
-                <TableCell sx={{ whiteSpace: 'nowrap' }}>{c.date_arrivee}</TableCell>
-                <TableCell>{c.correspondant_nom}</TableCell>
-                <TableCell sx={{ maxWidth: 360, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              <TableRow key={c.id} hover onClick={() => router.push(`/courrier/${c.id}`)}
+                sx={{ cursor: 'pointer', '& td': { borderBottom: `1px solid ${COLORS.bg}` },
+                  '&:hover td': { backgroundColor: '#f7fafd' } }}>
+                <TableCell sx={{ fontWeight: 800, whiteSpace: 'nowrap', color: COLORS.blue }}>{c.numero_ordre}</TableCell>
+                <TableCell sx={{ whiteSpace: 'nowrap', color: COLORS.muted, fontSize: '0.85rem' }}>{c.date_arrivee}</TableCell>
+                <TableCell sx={{ fontWeight: 600 }}>{c.correspondant_nom}</TableCell>
+                <TableCell sx={{ maxWidth: 360, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: COLORS.ink }}>
                   {c.objet}
                 </TableCell>
                 <TableCell><ChipStatut statut={c.statut} libelle={c.statut_libelle} /></TableCell>
@@ -151,8 +169,8 @@ export default function ListeCourrier() {
       </TableContainer>
 
       {pages > 1 && (
-        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
-          <Pagination count={pages} page={page} onChange={(e, v) => setPage(v)} color="primary" />
+        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>
+          <Pagination count={pages} page={page} onChange={(e, v) => setPage(v)} color="primary" shape="rounded" />
         </Box>
       )}
     </IntranetShell>

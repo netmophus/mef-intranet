@@ -9,6 +9,7 @@ import {
 import UploadFileIcon from '@mui/icons-material/UploadFile';
 import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import AddCircleIcon from '@mui/icons-material/AddCircle';
 import IntranetShell from '@/components/IntranetShell';
 import AccesRefuse from '@/components/AccesRefuse';
 import { apiGet, apiPost, ApiError } from '@/lib/api';
@@ -148,14 +149,28 @@ export default function EnregistrerCourrier() {
 
   return (
     <IntranetShell>
-      <Typography variant="h5" sx={{ fontWeight: 800, color: COLORS.blue, mb: 2 }}>
-        Enregistrer un courrier arrivée
-      </Typography>
+      {/* En-tête */}
+      <Box sx={{ mb: 2.5 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.3 }}>
+          <Box sx={{ width: 40, height: 40, borderRadius: 2, backgroundColor: `${COLORS.green}1f`, color: COLORS.greenDark,
+            display: 'flex', alignItems: 'center', justifyContent: 'center', '& svg': { fontSize: 24 } }}>
+            <AddCircleIcon />
+          </Box>
+          <Typography component="h1" sx={{ fontWeight: 800, color: COLORS.blue, fontSize: { xs: '1.4rem', md: '1.7rem' } }}>
+            Enregistrer un courrier arrivée
+          </Typography>
+        </Box>
+        <Box sx={{ width: 64, height: 4, borderRadius: 2, background: TRICOLOR, mt: 1.2, ml: 0.2 }} />
+      </Box>
 
       <Paper component="form" onSubmit={soumettre} elevation={0}
-        sx={{ p: { xs: 2, md: 3 }, border: `1px solid ${COLORS.border}`, borderRadius: 3, maxWidth: 780 }}>
-        {erreur && <Alert severity="error" sx={{ mb: 2 }}>{erreur}</Alert>}
+        sx={{ p: { xs: 2, md: 3 }, border: `1px solid ${COLORS.border}`, borderRadius: 3, maxWidth: 820,
+          boxShadow: '0 8px 22px rgba(0,40,80,0.06)' }}>
+        {erreur && <Alert severity="error" sx={{ mb: 2, borderRadius: 2 }}>{erreur}</Alert>}
 
+        <Typography sx={{ fontWeight: 800, color: COLORS.blueDark, fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: 0.6, mb: 1 }}>
+          Pièce jointe
+        </Typography>
         {/* 1. Scan (dropzone) */}
         <Box
           ref={dropRef}
@@ -186,6 +201,9 @@ export default function EnregistrerCourrier() {
           )}
         </Box>
 
+        <Typography sx={{ fontWeight: 800, color: COLORS.blueDark, fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: 0.6, mb: 1.5 }}>
+          Informations du courrier
+        </Typography>
         <Grid container spacing={2}>
           <Grid size={{ xs: 12, sm: 6 }}>
             <TextField label="Date du document" type="date" value={f.date_document}

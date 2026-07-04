@@ -39,45 +39,58 @@ export default function LoginPage() {
   }
 
   return (
-    <Box sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: COLORS.bg }}>
-      {/* Filet tricolore */}
-      <Box sx={{ height: 5, background: TRICOLOR }} />
-
-      <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', p: 2 }}>
-        <Card
-          component="form"
-          onSubmit={onSubmit}
-          elevation={0}
+    <Box
+      sx={{
+        minHeight: '100vh',
+        display: 'flex', alignItems: 'center', justifyContent: 'center', p: 2,
+        background: 'radial-gradient(1200px 600px at 50% -10%, #dbe7f5 0%, #EEF1F5 55%)',
+      }}
+    >
+      <Card
+        component="form"
+        onSubmit={onSubmit}
+        elevation={0}
+        sx={{
+          width: '100%', maxWidth: 430,
+          border: `1px solid ${COLORS.border}`,
+          borderRadius: 4,
+          boxShadow: '0 24px 60px rgba(0,40,80,0.18)',
+          overflow: 'hidden',
+        }}
+      >
+        {/* Bandeau de marque */}
+        <Box
           sx={{
-            width: '100%',
-            maxWidth: 420,
-            border: `1px solid ${COLORS.border}`,
-            borderRadius: 3,
-            boxShadow: '0 18px 44px rgba(0,0,0,0.10)',
-            p: { xs: 3, md: 4 },
+            position: 'relative',
+            background: 'linear-gradient(105deg, #002B55 0%, #004080 60%, #0a5ca8 100%)',
+            color: '#fff', textAlign: 'center',
+            pt: 3.5, pb: 3, px: 3,
           }}
         >
-          {/* Identité */}
-          <Box sx={{ textAlign: 'center', mb: 3 }}>
-            <Box
-              component="img"
-              src="/armoiries-niger.png"
-              alt="Armoiries du Niger"
-              sx={{ width: 76, height: 'auto', mx: 'auto', mb: 1.5 }}
-            />
-            <Typography sx={{ fontWeight: 800, color: COLORS.blue, fontSize: '1.1rem', lineHeight: 1.2 }}>
-              MINISTÈRE DES FINANCES
-            </Typography>
-            <Typography sx={{ color: COLORS.goldDark, fontWeight: 700, fontSize: '0.82rem' }}>
-              République du Niger
-            </Typography>
-            <Typography sx={{ color: COLORS.muted, fontWeight: 600, fontSize: '0.9rem', mt: 1 }}>
-              Intranet
-            </Typography>
-          </Box>
+          <Box
+            component="img" src="/armoiries-niger.png" alt="Armoiries du Niger"
+            sx={{ height: 82, width: 'auto', mx: 'auto', mb: 1.5, filter: 'drop-shadow(0 4px 10px rgba(0,0,0,0.35))' }}
+          />
+          <Typography sx={{ fontWeight: 800, fontSize: '1rem', lineHeight: 1.25, letterSpacing: 0.2 }}>
+            MINISTÈRE DE L'ÉCONOMIE ET DES FINANCES
+          </Typography>
+          <Typography sx={{ color: COLORS.gold, fontWeight: 700, fontSize: '0.8rem', mt: 0.25 }}>
+            République du Niger
+          </Typography>
+          <Box sx={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 4, background: TRICOLOR }} />
+        </Box>
+
+        {/* Formulaire */}
+        <Box sx={{ p: { xs: 3, md: 4 } }}>
+          <Typography component="h1" sx={{ fontWeight: 800, color: COLORS.blueDark, fontSize: '1.15rem', mb: 0.3 }}>
+            Connexion à l'intranet
+          </Typography>
+          <Typography sx={{ color: COLORS.muted, fontSize: '0.85rem', mb: 2.5 }}>
+            Identifiez-vous avec votre matricule.
+          </Typography>
 
           {erreur && (
-            <Alert severity="error" sx={{ mb: 2 }}>
+            <Alert severity="error" sx={{ mb: 2, borderRadius: 2 }}>
               {erreur}
             </Alert>
           )}
@@ -86,10 +99,7 @@ export default function LoginPage() {
             label="Matricule"
             value={matricule}
             onChange={(e) => setMatricule(e.target.value)}
-            fullWidth
-            required
-            autoFocus
-            autoComplete="username"
+            fullWidth required autoFocus autoComplete="username"
             sx={{ mb: 2 }}
           />
 
@@ -98,9 +108,7 @@ export default function LoginPage() {
             type={voir ? 'text' : 'password'}
             value={motDePasse}
             onChange={(e) => setMotDePasse(e.target.value)}
-            fullWidth
-            required
-            autoComplete="current-password"
+            fullWidth required autoComplete="current-password"
             slotProps={{
               input: {
                 endAdornment: (
@@ -116,13 +124,12 @@ export default function LoginPage() {
           />
 
           <Button
-            type="submit"
-            variant="contained"
-            fullWidth
-            size="large"
+            type="submit" variant="contained" fullWidth size="large"
             disabled={chargement}
             startIcon={<LoginIcon />}
-            sx={{ backgroundColor: COLORS.blue, fontWeight: 700, py: 1.2, '&:hover': { backgroundColor: COLORS.blueHover } }}
+            sx={{ backgroundColor: COLORS.blue, fontWeight: 700, py: 1.25,
+              boxShadow: '0 10px 22px rgba(0,64,128,0.30)',
+              '&:hover': { backgroundColor: COLORS.blueHover } }}
           >
             {chargement ? 'Connexion…' : 'Se connecter'}
           </Button>
@@ -131,8 +138,8 @@ export default function LoginPage() {
             Compte créé par la DSI. En cas de mot de passe oublié,
             contactez la DSI (poste XXXX).
           </Typography>
-        </Card>
-      </Box>
+        </Box>
+      </Card>
     </Box>
   );
 }

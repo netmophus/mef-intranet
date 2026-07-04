@@ -10,12 +10,47 @@ import {
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
 import CheckIcon from '@mui/icons-material/Check';
+import MoveToInboxIcon from '@mui/icons-material/MoveToInbox';
 import IntranetShell from '@/components/IntranetShell';
 import AccesRefuse from '@/components/AccesRefuse';
 import { apiGet, apiPost, apiBase, ApiError } from '@/lib/api';
 import { useAuth } from '@/lib/AuthContext';
 import { badgeDelai } from '@/lib/delais';
-import { COLORS } from '@/theme';
+import { COLORS, TRICOLOR } from '@/theme';
+
+// En-tête de page (icône + titre + filet tricolore).
+function Entete({ titre, sousTitre }) {
+  return (
+    <Box sx={{ mb: 2.5 }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.3 }}>
+        <Box sx={{ width: 40, height: 40, borderRadius: 2, backgroundColor: `${COLORS.gold}1f`, color: COLORS.goldDark,
+          display: 'flex', alignItems: 'center', justifyContent: 'center', '& svg': { fontSize: 24 } }}>
+          <MoveToInboxIcon />
+        </Box>
+        <Box>
+          <Typography component="h1" sx={{ fontWeight: 800, color: COLORS.blue, fontSize: { xs: '1.4rem', md: '1.7rem' }, lineHeight: 1.1 }}>
+            {titre}
+          </Typography>
+          {sousTitre && <Typography sx={{ color: COLORS.muted, fontSize: '0.85rem' }}>{sousTitre}</Typography>}
+        </Box>
+      </Box>
+      <Box sx={{ width: 64, height: 4, borderRadius: 2, background: TRICOLOR, mt: 1.2, ml: 0.2 }} />
+    </Box>
+  );
+}
+
+// En-tête coloré d'un panneau (carte).
+function TetePanneau({ children }) {
+  return (
+    <Box sx={{ px: 2, py: 1.5, color: '#fff', fontWeight: 800, fontSize: '0.95rem',
+      background: 'linear-gradient(100deg, #002B55 0%, #004080 100%)' }}>
+      {children}
+    </Box>
+  );
+}
+
+// Styles réutilisables pour les cartes de panneau.
+const PANNEAU = { border: `1px solid ${COLORS.border}`, borderRadius: 3, overflow: 'hidden', boxShadow: '0 8px 22px rgba(0,40,80,0.06)' };
 
 const INSTRUCTIONS = [
   ['POUR_TRAITEMENT', 'Pour traitement'],
@@ -180,7 +215,7 @@ export default function Bannette() {
       };
       return (
         <IntranetShell>
-          <Typography variant="h5" sx={{ fontWeight: 800, color: COLORS.blue, mb: 2 }}>Imputer un courrier</Typography>
+          <Entete titre="Imputer un courrier" sousTitre="Affectez le courrier à une direction destinataire" />
           <EcranImputation courrier={selection} directions={directions}
             onValide={suivant} onAnnule={() => setSelection(null)} />
         </IntranetShell>
@@ -188,14 +223,11 @@ export default function Bannette() {
     }
     return (
       <IntranetShell>
-        <Typography variant="h5" sx={{ fontWeight: 800, color: COLORS.blue, mb: 2 }}>Ma bannette — imputation</Typography>
+        <Entete titre="Ma bannette" sousTitre="Imputation du courrier arrivée" />
         <Grid container spacing={2}>
           <Grid size={{ xs: 12, md: 7 }}>
-            <Paper elevation={0} sx={{ border: `1px solid ${COLORS.border}`, borderRadius: 2 }}>
-              <Typography sx={{ fontWeight: 800, color: COLORS.blue, p: 2, pb: 1 }}>
-                À imputer ({bann.a_imputer?.length || 0})
-              </Typography>
-              <Divider />
+            <Paper elevation={0} sx={PANNEAU}>
+              <TetePanneau>À imputer ({bann.a_imputer?.length || 0})</TetePanneau>
               <List disablePadding>
                 {(bann.a_imputer || []).map((c) => (
                   <ListItemButton key={c.id} onClick={() => setSelection(c)} divider>
@@ -209,14 +241,13 @@ export default function Bannette() {
             </Paper>
           </Grid>
           <Grid size={{ xs: 12, md: 5 }}>
-            <Paper elevation={0} sx={{ border: `1px solid ${COLORS.border}`, borderRadius: 2 }}>
-              <Typography sx={{ fontWeight: 800, color: COLORS.blue, p: 2, pb: 1 }}>
-                Suivi — en attente d'accusé ({bann.suivi?.length || 0})
-              </Typography>
-              <Divider />
+            <Paper elevation={0} sx={PANNEAU}>
+              <TetePanneau>Suivi — en attente d'accusé ({bann.suivi?.length || 0})</TetePanneau>
               <List disablePadding>
                 {(bann.suivi || []).map((i) => (
-                  <Box key={i.imputation_id} sx={{ p: 1.5, borderBottom: `1px solid ${COLORS.border}`, display: 'flex', justifyContent: 'space-between', gap: 1 }}>
+                  <Box key={i.imputation_id} onClick={() => router.push(`/courrier/${i.courrier.id}`)}
+                    sx={{ p: 1.5, borderBottom: `1px solid ${COLORS.border}`, display: 'flex', justifyContent: 'space-between', gap: 1,
+                      cursor: 'pointer', '&:hover': { backgroundColor: `${COLORS.blue}08` } }}>
                     <ResumeCourrier c={i.courrier} />
                     <Box sx={{ textAlign: 'right', flexShrink: 0 }}>
                       <Chip size="small" label={i.direction_cible} sx={{ mb: 0.5 }} />
@@ -240,31 +271,35 @@ export default function Bannette() {
 
   return (
     <IntranetShell>
-      <Typography variant="h5" sx={{ fontWeight: 800, color: COLORS.blue, mb: 2 }}>Ma bannette</Typography>
-      <Tabs value={onglet} onChange={(e, v) => setOnglet(v)} sx={{ mb: 2 }}>
+      <Entete titre="Ma bannette" sousTitre="Traitement du courrier qui vous est imputé" />
+      <Tabs value={onglet} onChange={(e, v) => setOnglet(v)}
+        sx={{ mb: 2, '& .MuiTab-root': { fontWeight: 700, textTransform: 'none' },
+          '& .MuiTabs-indicator': { height: 3, borderRadius: 3 } }}>
         {titres.map((t) => <Tab key={t} label={t} />)}
       </Tabs>
 
-      <Paper elevation={0} sx={{ border: `1px solid ${COLORS.border}`, borderRadius: 2 }}>
+      <Paper elevation={0} sx={PANNEAU}>
         <List disablePadding>
           {courante.map((i) => (
             <Box key={i.imputation_id} sx={{ p: 1.5, borderBottom: `1px solid ${COLORS.border}`, display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap' }}>
-              <Box sx={{ flex: 1, minWidth: 220, cursor: 'pointer' }} onClick={() => router.push(`/courrier/${i.courrier.id}`)}>
+              <Box role="link" onClick={() => router.push(`/courrier/${i.courrier.id}`)}
+                sx={{ flex: 1, minWidth: 220, cursor: 'pointer', borderRadius: 1, p: 0.5, m: -0.5,
+                  '&:hover': { backgroundColor: `${COLORS.blue}08` } }}>
                 <ResumeCourrier c={i.courrier} />
               </Box>
               <Chip size="small" label={i.instruction_libelle} sx={{ backgroundColor: `${COLORS.blue}14`, color: COLORS.blue }} />
               <ChipDelai delai={i.delai} />
               {onglet === 0 && (
                 <Button size="small" variant="contained" startIcon={<CheckIcon />} disabled={busy}
-                  onClick={() => accuser(i.imputation_id)}
+                  onClick={(e) => { e.stopPropagation(); accuser(i.imputation_id); }}
                   sx={{ backgroundColor: COLORS.green, '&:hover': { backgroundColor: COLORS.greenDark } }}>
                   Accuser réception
                 </Button>
               )}
               {onglet === 1 && (
                 <>
-                  <Button size="small" variant="outlined" onClick={() => setDialogSous(i)}>Sous-imputer</Button>
-                  <Button size="small" variant="contained" onClick={() => setDialogTraite(i)}
+                  <Button size="small" variant="outlined" onClick={(e) => { e.stopPropagation(); setDialogSous(i); }}>Sous-imputer</Button>
+                  <Button size="small" variant="contained" onClick={(e) => { e.stopPropagation(); setDialogTraite(i); }}
                     sx={{ backgroundColor: COLORS.blue, '&:hover': { backgroundColor: COLORS.blueHover } }}>Marquer traité</Button>
                 </>
               )}
