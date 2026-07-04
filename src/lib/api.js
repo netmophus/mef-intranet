@@ -1,10 +1,11 @@
 // Client API de l'intranet.
 // - envoie toujours les cookies (credentials:'include')
-// - sur 401 (hors endpoints d'auth) : tente UNE fois POST /api/v1/auth/refresh/
+// - sur 401 (hors login/refresh) : tente UNE fois POST /api/v1/auth/refresh/
 //   puis rejoue la requête ; si nouvel échec → redirection /login.
+// - gère JSON et FormData (upload de scan).
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-const AUTH_PREFIX = '/api/v1/auth/';
+const SANS_REFRESH = ['/api/v1/auth/login/', '/api/v1/auth/refresh/'];
 
 export class ApiError extends Error {
   constructor(status, data) {
@@ -26,16 +27,16 @@ async function parse(res) {
 }
 
 async function request(path, { method = 'GET', body, _retry = false } = {}) {
+  const estForm = typeof FormData !== 'undefined' && body instanceof FormData;
   const res = await fetch(`${API_URL}${path}`, {
     method,
     credentials: 'include',
-    headers: body !== undefined ? { 'Content-Type': 'application/json' } : undefined,
-    body: body !== undefined ? JSON.stringify(body) : undefined,
+    headers: body !== undefined && !estForm ? { 'Content-Type': 'application/json' } : undefined,
+    body: body !== undefined ? (estForm ? body : JSON.stringify(body)) : undefined,
   });
 
-  // Rafraîchissement automatique (une seule tentative), jamais sur les endpoints d'auth.
-  if (res.status === 401 && !_retry && !path.startsWith(AUTH_PREFIX)) {
-    const refreshed = await fetch(`${API_URL}${AUTH_PREFIX}refresh/`, {
+  if (res.status === 401 && !_retry && !SANS_REFRESH.includes(path)) {
+    const refreshed = await fetch(`${API_URL}/api/v1/auth/refresh/`, {
       method: 'POST',
       credentials: 'include',
     });
@@ -60,3 +61,9 @@ export function apiGet(path) {
 export function apiPost(path, body) {
   return request(path, { method: 'POST', body });
 }
+
+export function apiPatch(path, body) {
+  return request(path, { method: 'PATCH', body });
+}
+
+export const BASE_API = API_URL;
