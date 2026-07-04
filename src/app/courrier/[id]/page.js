@@ -11,7 +11,7 @@ import ArchiveIcon from '@mui/icons-material/Archive';
 import LockIcon from '@mui/icons-material/Lock';
 import IntranetShell from '@/components/IntranetShell';
 import AccesRefuse from '@/components/AccesRefuse';
-import { apiGet, apiPatch, apiPost, BASE_API, ApiError } from '@/lib/api';
+import { apiGet, apiPatch, apiPost, apiBase, ApiError } from '@/lib/api';
 import { useAuth } from '@/lib/AuthContext';
 import { COLORS, TRICOLOR } from '@/theme';
 
@@ -28,6 +28,26 @@ function Ligne({ label, valeur }) {
 
 function horodate(iso) {
   try { return new Date(iso).toLocaleString('fr-FR'); } catch { return iso; }
+}
+
+function NoeudImputation({ imp, niveau }) {
+  return (
+    <Box sx={{ ml: niveau * 2.5, borderLeft: niveau ? `2px solid ${COLORS.border}` : 'none', pl: niveau ? 1.25 : 0, mt: 1 }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexWrap: 'wrap' }}>
+        <Chip size="small" label={imp.direction_cible.sigle}
+          sx={{ fontWeight: 800, backgroundColor: `${COLORS.blue}14`, color: COLORS.blue }} />
+        <Typography sx={{ fontSize: '0.8rem', color: COLORS.ink }}>{imp.instruction_libelle}</Typography>
+        <Chip size="small" variant="outlined" label={imp.statut_libelle} />
+      </Box>
+      <Typography sx={{ fontSize: '0.72rem', color: COLORS.muted, mt: 0.25 }}>
+        Imputé par {imp.impute_par.nom_complet}
+        {imp.accuse_le ? ` · accusé par ${imp.accuse_par?.nom_complet}` : " · en attente d'accusé"}
+      </Typography>
+      {(imp.sous_imputations || []).map((s) => (
+        <NoeudImputation key={s.id} imp={s} niveau={niveau + 1} />
+      ))}
+    </Box>
+  );
 }
 
 export default function FicheCourrier() {
@@ -139,7 +159,7 @@ export default function FicheCourrier() {
           <Paper elevation={0} sx={{ border: `1px solid ${COLORS.border}`, borderRadius: 2, overflow: 'hidden', height: { xs: 420, md: '72vh' } }}>
             {courrier.a_scan ? (
               <Box component="iframe" title="Scan du courrier"
-                src={`${BASE_API}/api/v1/courriers/${courrier.id}/scan/`}
+                src={`${apiBase()}/api/v1/courriers/${courrier.id}/scan/`}
                 sx={{ width: '100%', height: '100%', border: 0 }} />
             ) : (
               <Box sx={{ p: 4, textAlign: 'center', color: COLORS.muted }}>Aucun scan disponible.</Box>
@@ -162,6 +182,15 @@ export default function FicheCourrier() {
             <Typography sx={{ color: COLORS.muted, fontSize: '0.7rem', mt: 1, wordBreak: 'break-all' }}>
               SHA-256 : {courrier.hash_sha256}
             </Typography>
+          </Paper>
+
+          <Paper elevation={0} sx={{ p: 2.5, border: `1px solid ${COLORS.border}`, borderRadius: 2, mb: 2 }}>
+            <Typography sx={{ fontWeight: 800, color: COLORS.blue, mb: 1 }}>Circuit</Typography>
+            {(courrier.imputations || []).length === 0 ? (
+              <Typography sx={{ color: COLORS.muted, fontSize: '0.85rem' }}>Courrier pas encore imputé.</Typography>
+            ) : (
+              courrier.imputations.map((i) => <NoeudImputation key={i.id} imp={i} niveau={0} />)
+            )}
           </Paper>
 
           <Paper elevation={0} sx={{ p: 2.5, border: `1px solid ${COLORS.border}`, borderRadius: 2 }}>

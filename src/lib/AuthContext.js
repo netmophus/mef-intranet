@@ -34,7 +34,7 @@ export function AuthProvider({ children }) {
   );
 
   return (
-    <AuthContext.Provider value={{ ...etat, has, refresh: charger }}>
+    <AuthContext.Provider value={{ ...etat, has }}>
       {children}
     </AuthContext.Provider>
   );

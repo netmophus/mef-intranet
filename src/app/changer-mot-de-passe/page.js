@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { Box, Card, TextField, Button, Typography, Alert } from '@mui/material';
 import LockResetIcon from '@mui/icons-material/LockReset';
 import { apiPost, ApiError } from '@/lib/api';
@@ -15,7 +14,6 @@ const REGLES = [
 ];
 
 export default function ChangerMotDePassePage() {
-  const router = useRouter();
   const [actuel, setActuel] = useState('');
   const [nouveau, setNouveau] = useState('');
   const [confirmation, setConfirmation] = useState('');
@@ -38,7 +36,8 @@ export default function ChangerMotDePassePage() {
         confirmation,
       });
       setSucces(true);
-      setTimeout(() => router.replace('/'), 1200);
+      // Vraie navigation pour rafraîchir le contexte d'auth (doit_changer_mdp = false).
+      setTimeout(() => { window.location.href = '/'; }, 1200);
     } catch (err) {
       let msg = "Une erreur est survenue. Veuillez réessayer.";
       if (err instanceof ApiError && err.data && typeof err.data === 'object') {

@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import {
   Box, Card, TextField, Button, Typography, InputAdornment, IconButton, Alert,
 } from '@mui/material';
@@ -12,7 +11,6 @@ import { apiPost } from '@/lib/api';
 import { COLORS, TRICOLOR } from '@/theme';
 
 export default function LoginPage() {
-  const router = useRouter();
   const [matricule, setMatricule] = useState('');
   const [motDePasse, setMotDePasse] = useState('');
   const [voir, setVoir] = useState(false);
@@ -28,7 +26,8 @@ export default function LoginPage() {
         matricule: matricule.trim(),
         mot_de_passe: motDePasse,
       });
-      router.replace(data.doit_changer_mdp ? '/changer-mot-de-passe' : '/');
+      // Vraie navigation : le AuthProvider se remonte et relit /me/ avec le cookie.
+      window.location.href = data.doit_changer_mdp ? '/changer-mot-de-passe' : '/';
     } catch (err) {
       setErreur(
         err.status === 401

@@ -1,17 +1,18 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import {
   AppBar, Toolbar, Box, Typography, Button, Drawer, List, ListItemButton,
-  ListItemIcon, ListItemText, IconButton, Divider,
+  ListItemIcon, ListItemText, IconButton, Badge,
 } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
 import HomeIcon from '@mui/icons-material/Home';
 import MarkEmailUnreadIcon from '@mui/icons-material/MarkEmailUnread';
 import AddCircleIcon from '@mui/icons-material/AddCircle';
+import MoveToInboxIcon from '@mui/icons-material/MoveToInbox';
 import LogoutIcon from '@mui/icons-material/Logout';
-import { apiPost } from '@/lib/api';
+import { apiGet, apiPost } from '@/lib/api';
 import { useAuth } from '@/lib/AuthContext';
 import { COLORS, TRICOLOR } from '@/theme';
 
@@ -19,6 +20,7 @@ const LARGEUR = 240;
 
 const NAV = [
   { label: 'Accueil', href: '/', icon: HomeIcon },
+  { label: 'Ma bannette', href: '/bannette', icon: MoveToInboxIcon, anyPerm: ['courrier.imputer_premier_niveau', 'courrier.accuser_reception'] },
   { label: 'Courrier', href: '/courrier', icon: MarkEmailUnreadIcon, perm: 'courrier.consulter_courrier' },
   { label: 'Enregistrer un courrier', href: '/courrier/enregistrer', icon: AddCircleIcon, perm: 'courrier.enregistrer_courrier' },
 ];
@@ -28,13 +30,27 @@ export default function IntranetShell({ children }) {
   const pathname = usePathname();
   const { utilisateur, has } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [badgeBannette, setBadgeBannette] = useState(0);
+
+  const aBannette = has('courrier.imputer_premier_niveau') || has('courrier.accuser_reception');
+
+  useEffect(() => {
+    if (!aBannette) return;
+    apiGet('/api/v1/bannette/')
+      .then((b) => setBadgeBannette((b.a_imputer?.length || 0) + (b.a_accuser?.length || 0)))
+      .catch(() => {});
+  }, [aBannette]);
 
   async function deconnexion() {
     try { await apiPost('/api/v1/auth/logout/'); } catch { /* on redirige quand même */ }
-    router.replace('/login');
+    window.location.href = '/login';  // vraie navigation : réinitialise le contexte d'auth
   }
 
-  const liens = NAV.filter((n) => !n.perm || has(n.perm));
+  const liens = NAV.filter((n) => {
+    if (n.perm) return has(n.perm);
+    if (n.anyPerm) return n.anyPerm.some(has);
+    return true;
+  });
 
   const contenuDrawer = (
     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
@@ -62,7 +78,11 @@ export default function IntranetShell({ children }) {
                 '&.Mui-selected .MuiListItemIcon-root': { color: COLORS.blue },
               }}
             >
-              <ListItemIcon sx={{ minWidth: 38 }}><Icon /></ListItemIcon>
+              <ListItemIcon sx={{ minWidth: 38 }}>
+                {href === '/bannette' ? (
+                  <Badge badgeContent={badgeBannette} color="error"><Icon /></Badge>
+                ) : <Icon />}
+              </ListItemIcon>
               <ListItemText primary={label} slotProps={{ primary: { fontWeight: 600, fontSize: '0.9rem' } }} />
             </ListItemButton>
           );
