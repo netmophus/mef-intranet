@@ -67,6 +67,13 @@ function ChipDelai({ delai }) {
     variant={b.couleur === 'default' ? 'outlined' : 'filled'} sx={{ fontWeight: 700 }} />;
 }
 
+function ChipRelance({ iso }) {
+  if (!iso) return null;
+  const d = new Date(iso);
+  const j = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}`;
+  return <Chip size="small" color="warning" label={`Relancé le ${j}`} sx={{ fontWeight: 700 }} />;
+}
+
 function ResumeCourrier({ c }) {
   return (
     <Box sx={{ minWidth: 0 }}>
@@ -249,9 +256,10 @@ export default function Bannette() {
                     sx={{ p: 1.5, borderBottom: `1px solid ${COLORS.border}`, display: 'flex', justifyContent: 'space-between', gap: 1,
                       cursor: 'pointer', '&:hover': { backgroundColor: `${COLORS.blue}08` } }}>
                     <ResumeCourrier c={i.courrier} />
-                    <Box sx={{ textAlign: 'right', flexShrink: 0 }}>
-                      <Chip size="small" label={i.direction_cible} sx={{ mb: 0.5 }} />
+                    <Box sx={{ textAlign: 'right', flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 0.5 }}>
+                      <Chip size="small" label={i.direction_cible} />
                       <ChipDelai delai={i.delai} />
+                      <ChipRelance iso={i.derniere_relance_le} />
                     </Box>
                   </Box>
                 ))}
@@ -289,6 +297,7 @@ export default function Bannette() {
               </Box>
               <Chip size="small" label={i.instruction_libelle} sx={{ backgroundColor: `${COLORS.blue}14`, color: COLORS.blue }} />
               <ChipDelai delai={i.delai} />
+              <ChipRelance iso={i.derniere_relance_le} />
               {onglet === 0 && (
                 <Button size="small" variant="contained" startIcon={<CheckIcon />} disabled={busy}
                   onClick={(e) => { e.stopPropagation(); accuser(i.imputation_id); }}

@@ -8,6 +8,7 @@ import {
 } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
 import HomeIcon from '@mui/icons-material/Home';
+import DashboardIcon from '@mui/icons-material/Dashboard';
 import MarkEmailUnreadIcon from '@mui/icons-material/MarkEmailUnread';
 import AddCircleIcon from '@mui/icons-material/AddCircle';
 import MoveToInboxIcon from '@mui/icons-material/MoveToInbox';
@@ -20,6 +21,7 @@ const LARGEUR = 248;
 
 const NAV = [
   { label: 'Accueil', href: '/', icon: HomeIcon },
+  { label: 'Tableau de bord', href: '/tableau-bord', icon: DashboardIcon, perm: 'courrier.voir_tableau_bord' },
   { label: 'Ma bannette', href: '/bannette', icon: MoveToInboxIcon, anyPerm: ['courrier.imputer_premier_niveau', 'courrier.accuser_reception'] },
   { label: 'Courrier', href: '/courrier', icon: MarkEmailUnreadIcon, perm: 'courrier.consulter_courrier' },
   { label: 'Enregistrer un courrier', href: '/courrier/enregistrer', icon: AddCircleIcon, perm: 'courrier.enregistrer_courrier' },
