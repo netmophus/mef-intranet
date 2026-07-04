@@ -12,6 +12,8 @@ import DashboardIcon from '@mui/icons-material/Dashboard';
 import MarkEmailUnreadIcon from '@mui/icons-material/MarkEmailUnread';
 import AddCircleIcon from '@mui/icons-material/AddCircle';
 import MoveToInboxIcon from '@mui/icons-material/MoveToInbox';
+import OutboxIcon from '@mui/icons-material/Outbox';
+import LocalShippingIcon from '@mui/icons-material/LocalShipping';
 import LogoutIcon from '@mui/icons-material/Logout';
 import { apiGet, apiPost } from '@/lib/api';
 import { useAuth } from '@/lib/AuthContext';
@@ -24,7 +26,9 @@ const NAV = [
   { label: 'Tableau de bord', href: '/tableau-bord', icon: DashboardIcon, perm: 'courrier.voir_tableau_bord' },
   { label: 'Ma bannette', href: '/bannette', icon: MoveToInboxIcon, anyPerm: ['courrier.imputer_premier_niveau', 'courrier.accuser_reception'] },
   { label: 'Courrier', href: '/courrier', icon: MarkEmailUnreadIcon, perm: 'courrier.consulter_courrier' },
-  { label: 'Enregistrer un courrier', href: '/courrier/enregistrer', icon: AddCircleIcon, perm: 'courrier.enregistrer_courrier' },
+  { label: 'Enregistrer une arrivée', href: '/courrier/enregistrer', icon: AddCircleIcon, perm: 'courrier.enregistrer_courrier' },
+  { label: 'Enregistrer un départ', href: '/courrier/depart/enregistrer', icon: OutboxIcon, perm: 'courrier.enregistrer_courrier' },
+  { label: 'Expéditions', href: '/courrier/expeditions', icon: LocalShippingIcon, perm: 'courrier.enregistrer_courrier' },
 ];
 
 // Initiales à partir du nom complet (pour l'avatar).
@@ -36,14 +40,16 @@ function initiales(nom = '') {
 // Détermine l'item de menu actif (gère /courrier vs /courrier/enregistrer).
 function estActif(href, pathname) {
   if (href === '/') return pathname === '/';
-  if (href === '/courrier') return pathname === '/courrier' || (pathname.startsWith('/courrier/') && !pathname.startsWith('/courrier/enregistrer'));
+  if (href === '/courrier') return pathname === '/courrier' || (pathname.startsWith('/courrier/')
+    && !pathname.startsWith('/courrier/enregistrer') && !pathname.startsWith('/courrier/depart')
+    && !pathname.startsWith('/courrier/expeditions'));
   return pathname === href || pathname.startsWith(href + '/');
 }
 
 export default function IntranetShell({ children }) {
   const router = useRouter();
   const pathname = usePathname();
-  const { utilisateur, has } = useAuth();
+  const { utilisateur, has, nom_ministere } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [badgeBannette, setBadgeBannette] = useState(0);
 
@@ -153,7 +159,7 @@ export default function IntranetShell({ children }) {
           </IconButton>
           <Typography component="div" sx={{ fontWeight: 800, flex: 1, lineHeight: 1.15,
             fontSize: { xs: '0.9rem', md: '1.15rem' } }}>
-            Ministère de l'Économie et des Finances
+            {nom_ministere}
           </Typography>
 
           {utilisateur && (

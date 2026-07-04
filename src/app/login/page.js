@@ -7,7 +7,9 @@ import {
 import Visibility from '@mui/icons-material/Visibility';
 import VisibilityOff from '@mui/icons-material/VisibilityOff';
 import LoginIcon from '@mui/icons-material/Login';
-import { apiPost } from '@/lib/api';
+import { useEffect } from 'react';
+import { apiGet, apiPost } from '@/lib/api';
+import { NOM_MINISTERE_DEFAUT } from '@/lib/AuthContext';
 import { COLORS, TRICOLOR } from '@/theme';
 
 export default function LoginPage() {
@@ -16,6 +18,11 @@ export default function LoginPage() {
   const [voir, setVoir] = useState(false);
   const [erreur, setErreur] = useState('');
   const [chargement, setChargement] = useState(false);
+  const [nomMinistere, setNomMinistere] = useState(NOM_MINISTERE_DEFAUT);
+
+  useEffect(() => {
+    apiGet('/api/v1/config/').then((d) => d?.nom_ministere && setNomMinistere(d.nom_ministere)).catch(() => {});
+  }, []);
 
   async function onSubmit(e) {
     e.preventDefault();
@@ -72,7 +79,7 @@ export default function LoginPage() {
             sx={{ height: 82, width: 'auto', mx: 'auto', mb: 1.5, filter: 'drop-shadow(0 4px 10px rgba(0,0,0,0.35))' }}
           />
           <Typography sx={{ fontWeight: 800, fontSize: '1rem', lineHeight: 1.25, letterSpacing: 0.2 }}>
-            MINISTÈRE DE L'ÉCONOMIE ET DES FINANCES
+            {nomMinistere.toUpperCase()}
           </Typography>
           <Typography sx={{ color: COLORS.gold, fontWeight: 700, fontSize: '0.8rem', mt: 0.25 }}>
             République du Niger

@@ -5,9 +5,13 @@ import { apiGet } from './api';
 
 const AuthContext = createContext(null);
 
+// Dénomination par défaut (repli si l'API n'a pas encore répondu).
+export const NOM_MINISTERE_DEFAUT = "Ministère de l'Économie et des Finances";
+
 export function AuthProvider({ children }) {
   const [etat, setEtat] = useState({
     loading: true, utilisateur: null, roles: [], permissions: [], doit_changer_mdp: false,
+    nom_ministere: NOM_MINISTERE_DEFAUT,
   });
 
   const charger = useCallback(async () => {
@@ -20,9 +24,11 @@ export function AuthProvider({ children }) {
         roles: u.roles || [],
         permissions: u.permissions || [],
         doit_changer_mdp: d.doit_changer_mdp,
+        nom_ministere: d.nom_ministere || NOM_MINISTERE_DEFAUT,
       });
     } catch {
-      setEtat({ loading: false, utilisateur: null, roles: [], permissions: [], doit_changer_mdp: false });
+      setEtat({ loading: false, utilisateur: null, roles: [], permissions: [], doit_changer_mdp: false,
+        nom_ministere: NOM_MINISTERE_DEFAUT });
     }
   }, []);
 

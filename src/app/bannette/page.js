@@ -75,6 +75,13 @@ function ChipRelance({ iso }) {
   return <Chip size="small" color="warning" label={`Relancé le ${j}`} sx={{ fontWeight: 700 }} />;
 }
 
+function ChipTraite({ iso }) {
+  if (!iso) return null;
+  const d = new Date(iso);
+  const j = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}`;
+  return <Chip size="small" color="success" label={`Traité le ${j}`} sx={{ fontWeight: 700 }} />;
+}
+
 function ResumeCourrier({ c }) {
   return (
     <Box sx={{ minWidth: 0 }}>
@@ -93,6 +100,7 @@ function ResumeCourrier({ c }) {
 
 // ---- Écran d'imputation central (PDF à gauche, formulaire à droite) ----
 function EcranImputation({ courrier, directions, onValide, onAnnule }) {
+  const { utilisateur } = useAuth();
   const [direction, setDirection] = useState(null);
   const [instruction, setInstruction] = useState('POUR_TRAITEMENT');
   const [delai, setDelai] = useState('');
@@ -100,6 +108,11 @@ function EcranImputation({ courrier, directions, onValide, onAnnule }) {
   const [copies, setCopies] = useState([]); // directions pour information
   const [erreur, setErreur] = useState('');
   const [envoi, setEnvoi] = useState(false);
+
+  // 0.1 : au 1er niveau, exclure la chaîne centrale (racines SG/CAB) et la
+  // direction de rattachement de l'imputeur — on n'impute pas vers le haut.
+  const monDir = utilisateur?.direction?.id;
+  const cibles = directions.filter((d) => d.parent && d.id !== monDir);
 
   async function valider() {
     setErreur('');
@@ -134,7 +147,7 @@ function EcranImputation({ courrier, directions, onValide, onAnnule }) {
           <Typography sx={{ color: COLORS.muted, fontSize: '0.85rem', mb: 2 }}>{courrier.correspondant} — {courrier.objet}</Typography>
           {erreur && <Alert severity="error" sx={{ mb: 2 }}>{erreur}</Alert>}
 
-          <Autocomplete options={directions} value={direction} onChange={(e, v) => setDirection(v)}
+          <Autocomplete options={cibles} value={direction} onChange={(e, v) => setDirection(v)}
             getOptionLabel={(o) => `${o.sigle} — ${o.nom}`} isOptionEqualToValue={(o, v) => o.id === v.id}
             renderInput={(p) => <TextField {...p} label="Direction destinataire" required />} sx={{ mb: 2 }} />
 
@@ -155,7 +168,7 @@ function EcranImputation({ courrier, directions, onValide, onAnnule }) {
 
           {copies.map((c, i) => (
             <Box key={i} sx={{ display: 'flex', gap: 1, mb: 1, alignItems: 'center' }}>
-              <Autocomplete size="small" fullWidth options={directions} value={c}
+              <Autocomplete size="small" fullWidth options={cibles} value={c}
                 onChange={(e, v) => setCopies((old) => old.map((x, j) => j === i ? v : x))}
                 getOptionLabel={(o) => `${o.sigle} — ${o.nom}`} isOptionEqualToValue={(o, v) => o.id === v.id}
                 renderInput={(p) => <TextField {...p} label="Copie pour information" />} />
@@ -298,6 +311,7 @@ export default function Bannette() {
               <Chip size="small" label={i.instruction_libelle} sx={{ backgroundColor: `${COLORS.blue}14`, color: COLORS.blue }} />
               <ChipDelai delai={i.delai} />
               <ChipRelance iso={i.derniere_relance_le} />
+              <ChipTraite iso={i.traite_le} />
               {onglet === 0 && (
                 <Button size="small" variant="contained" startIcon={<CheckIcon />} disabled={busy}
                   onClick={(e) => { e.stopPropagation(); accuser(i.imputation_id); }}
@@ -329,26 +343,55 @@ function DialogTraite({ imp, onClose, onDone }) {
   const [commentaire, setCommentaire] = useState('');
   const [erreur, setErreur] = useState('');
   const [busy, setBusy] = useState(false);
-  useEffect(() => { setCommentaire(''); setErreur(''); }, [imp]);
+  const [sousOuvertes, setSousOuvertes] = useState(null); // 0.2 : liste à confirmer
+  useEffect(() => { setCommentaire(''); setErreur(''); setBusy(false); setSousOuvertes(null); }, [imp]);
   if (!imp) return null;
-  async function valider() {
+
+  async function envoyer(clore) {
     if (!commentaire.trim()) { setErreur('Le commentaire est obligatoire.'); return; }
-    setBusy(true);
-    try { await apiPost(`/api/v1/imputations/${imp.imputation_id}/traiter/`, { commentaire }); onDone(); }
-    catch (e) { setErreur(e instanceof ApiError && e.data?.detail ? e.data.detail : 'Échec.'); setBusy(false); }
+    setBusy(true); setErreur('');
+    try {
+      await apiPost(`/api/v1/imputations/${imp.imputation_id}/traiter/`,
+        clore ? { commentaire, clore_sous: true } : { commentaire });
+      onDone();
+    } catch (e) {
+      if (e instanceof ApiError && e.status === 409 && e.data?.code === 'SOUS_IMPUTATIONS_OUVERTES') {
+        setSousOuvertes(e.data.sous_imputations || []);  // bascule en mode confirmation
+        setBusy(false);
+      } else {
+        setErreur(e instanceof ApiError && e.data?.detail ? e.data.detail : 'Échec.');
+        setBusy(false);
+      }
+    }
   }
+
   return (
     <Dialog open onClose={onClose} maxWidth="sm" fullWidth>
       <DialogTitle sx={{ fontWeight: 800, color: COLORS.blue }}>Marquer traité — {imp.courrier.numero_ordre}</DialogTitle>
       <DialogContent dividers>
         {erreur && <Alert severity="error" sx={{ mb: 2 }}>{erreur}</Alert>}
+        {sousOuvertes && (
+          <Alert severity="warning" sx={{ mb: 2 }}>
+            <b>Des sous-imputations sont encore ouvertes :</b>
+            <Box component="ul" sx={{ m: '6px 0 0', pl: 2.2 }}>
+              {sousOuvertes.map((s) => <li key={s.id}>{s.direction_cible} — {s.instruction}</li>)}
+            </Box>
+            <Box sx={{ mt: 0.5 }}>Confirmer les clôturera (statut « traité ») et les retirera des bannettes concernées.</Box>
+          </Alert>
+        )}
         <TextField label="Commentaire (ex. « réponse transmise le… »)" value={commentaire}
           onChange={(e) => setCommentaire(e.target.value)} fullWidth multiline minRows={2} autoFocus />
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose}>Annuler</Button>
-        <Button variant="contained" onClick={valider} disabled={busy}
-          sx={{ backgroundColor: COLORS.blue, fontWeight: 700 }}>Valider</Button>
+        {sousOuvertes ? (
+          <Button variant="contained" color="warning" onClick={() => envoyer(true)} disabled={busy} sx={{ fontWeight: 700 }}>
+            {busy ? '…' : 'Clôturer les sous-imputations et valider'}
+          </Button>
+        ) : (
+          <Button variant="contained" onClick={() => envoyer(false)} disabled={busy}
+            sx={{ backgroundColor: COLORS.blue, fontWeight: 700 }}>{busy ? '…' : 'Valider'}</Button>
+        )}
       </DialogActions>
     </Dialog>
   );

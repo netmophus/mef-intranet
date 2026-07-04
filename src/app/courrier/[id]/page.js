@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import {
   Box, Typography, Paper, Grid, Chip, Button, Divider, CircularProgress, Alert,
@@ -12,6 +12,10 @@ import LockIcon from '@mui/icons-material/Lock';
 import CheckIcon from '@mui/icons-material/Check';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import MarkEmailUnreadIcon from '@mui/icons-material/MarkEmailUnread';
+import OutboxIcon from '@mui/icons-material/Outbox';
+import AttachFileIcon from '@mui/icons-material/AttachFile';
+import SendIcon from '@mui/icons-material/Send';
+import FactCheckIcon from '@mui/icons-material/FactCheck';
 import IntranetShell from '@/components/IntranetShell';
 import AccesRefuse from '@/components/AccesRefuse';
 import VisionneuseScan from '@/components/VisionneuseScan';
@@ -162,6 +166,47 @@ export default function FicheCourrier() {
     }
   }
 
+  // --- Courrier départ (lot C4) ---
+  const inputScan = useRef(null);
+  const [dialogDecharge, setDialogDecharge] = useState(false);
+
+  async function attacherScan(fichier) {
+    if (!fichier) return;
+    if (!fichier.name.toLowerCase().endsWith('.pdf')) { setErreur('Le scan doit être un PDF.'); return; }
+    setErreur('');
+    try {
+      const fd = new FormData(); fd.append('scan', fichier);
+      const c = await apiPost(`/api/v1/courriers/${id}/attacher-scan/`, fd);
+      setCourrier(c);
+    } catch (e) {
+      setErreur(e instanceof ApiError && e.data?.detail ? e.data.detail : "Échec de l'attachement du scan.");
+    }
+  }
+
+  async function expedier() {
+    setErreur('');
+    try {
+      const c = await apiPost(`/api/v1/courriers/${id}/expedier/`, {});
+      setCourrier(c);
+    } catch (e) {
+      setErreur(e instanceof ApiError && e.data?.detail ? e.data.detail : "Échec de l'expédition.");
+    }
+  }
+
+  const [dechargeDate, setDechargeDate] = useState('');
+  const [dechargeComm, setDechargeComm] = useState('');
+  const [errDecharge, setErrDecharge] = useState('');
+  async function pointerDecharge() {
+    setErrDecharge('');
+    if (!dechargeDate) { setErrDecharge('La date de décharge est requise.'); return; }
+    try {
+      const c = await apiPost(`/api/v1/courriers/${id}/decharge/`, { date: dechargeDate, commentaire: dechargeComm });
+      setCourrier(c); setDialogDecharge(false); setDechargeDate(''); setDechargeComm('');
+    } catch (e) {
+      setErrDecharge(e instanceof ApiError && e.data?.detail ? e.data.detail : 'Échec du pointage.');
+    }
+  }
+
   if (loading) {
     return <IntranetShell><Box sx={{ textAlign: 'center', mt: 8 }}><CircularProgress /></Box></IntranetShell>;
   }
@@ -175,10 +220,12 @@ export default function FicheCourrier() {
     return <IntranetShell><Box sx={{ textAlign: 'center', mt: 8 }}><CircularProgress /></Box></IntranetShell>;
   }
 
-  const peutModifier = has('courrier.modifier_courrier');
-  const peutClasser = has('courrier.classer_courrier') && courrier.statut === 'ENREGISTRE';
+  const estDepart = courrier.sens === 'DEPART';
+  const peutGererDepart = estDepart && has('courrier.enregistrer_courrier');
+  const peutModifier = has('courrier.modifier_courrier') && !estDepart;
+  const peutClasser = has('courrier.classer_courrier') && courrier.statut === 'ENREGISTRE' && !estDepart;
   // Imputation en attente d'accusé ciblant la direction de l'utilisateur.
-  const accusable = has('courrier.accuser_reception') && utilisateur?.direction
+  const accusable = has('courrier.accuser_reception') && utilisateur?.direction && !estDepart
     ? trouverAccusable(courrier.imputations, utilisateur.direction.id) : null;
 
   return (
@@ -188,11 +235,16 @@ export default function FicheCourrier() {
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, mb: 2.5, flexWrap: 'wrap' }}>
         <Box sx={{ width: 42, height: 42, borderRadius: 2, backgroundColor: `${COLORS.blue}14`, color: COLORS.blue,
           display: 'flex', alignItems: 'center', justifyContent: 'center', '& svg': { fontSize: 24 } }}>
-          <MarkEmailUnreadIcon />
+          {estDepart ? <OutboxIcon /> : <MarkEmailUnreadIcon />}
         </Box>
-        <Typography component="h1" sx={{ fontWeight: 800, color: COLORS.blue, fontSize: { xs: '1.5rem', md: '1.8rem' } }}>
-          {courrier.numero_ordre}
-        </Typography>
+        <Box sx={{ minWidth: 0 }}>
+          <Typography component="h1" sx={{ fontWeight: 800, color: COLORS.blue, fontSize: { xs: '1.25rem', md: '1.6rem' }, lineHeight: 1.15, wordBreak: 'break-word' }}>
+            {estDepart ? (courrier.reference_complete || courrier.numero_ordre) : courrier.numero_ordre}
+          </Typography>
+          {estDepart && courrier.reference_complete && (
+            <Typography sx={{ color: COLORS.muted, fontSize: '0.78rem' }}>{courrier.numero_ordre}</Typography>
+          )}
+        </Box>
         <Chip label={courrier.statut_libelle} size="small"
           sx={{ backgroundColor: `${COLORS.blue}14`, color: COLORS.blue, fontWeight: 700, borderRadius: 1.5 }} />
         {courrier.confidentialite === 'CONFIDENTIEL' && (
@@ -200,8 +252,25 @@ export default function FicheCourrier() {
             sx={{ backgroundColor: `${COLORS.orange}1f`, color: COLORS.orange, fontWeight: 700, borderRadius: 1.5 }} />
         )}
         <Box sx={{ flex: 1 }} />
-        {peutModifier && <Button startIcon={<EditIcon />} onClick={ouvrirModif} variant="outlined" sx={{ fontWeight: 700 }}>Modifier</Button>}
-        {peutClasser && <Button startIcon={<ArchiveIcon />} onClick={classer} variant="outlined" color="warning" sx={{ fontWeight: 700 }}>Classer sans suite</Button>}
+        {estDepart ? (
+          <>
+            {peutGererDepart && !courrier.a_scan && (
+              <Button startIcon={<AttachFileIcon />} onClick={() => inputScan.current?.click()} variant="outlined" sx={{ fontWeight: 700 }}>Attacher le scan</Button>
+            )}
+            {peutGererDepart && courrier.a_scan && !courrier.expedie_le && (
+              <Button startIcon={<SendIcon />} onClick={expedier} variant="contained" sx={{ backgroundColor: COLORS.blue, fontWeight: 700 }}>Marquer expédié</Button>
+            )}
+            {peutGererDepart && courrier.expedie_le && !courrier.decharge_recue_le && (
+              <Button startIcon={<FactCheckIcon />} onClick={() => setDialogDecharge(true)} variant="contained" sx={{ backgroundColor: COLORS.green, fontWeight: 700, '&:hover': { backgroundColor: COLORS.greenDark } }}>Pointer la décharge</Button>
+            )}
+            <input ref={inputScan} type="file" accept="application/pdf" hidden onChange={(e) => attacherScan(e.target.files[0])} />
+          </>
+        ) : (
+          <>
+            {peutModifier && <Button startIcon={<EditIcon />} onClick={ouvrirModif} variant="outlined" sx={{ fontWeight: 700 }}>Modifier</Button>}
+            {peutClasser && <Button startIcon={<ArchiveIcon />} onClick={classer} variant="outlined" color="warning" sx={{ fontWeight: 700 }}>Classer sans suite</Button>}
+          </>
+        )}
       </Box>
 
       <Grid container spacing={2}>
@@ -216,20 +285,67 @@ export default function FicheCourrier() {
         <Grid size={{ xs: 12, md: 5 }}>
           <Paper elevation={0} sx={{ ...CARTE, p: 2.5, mb: 2 }}>
             <TitrePanneau>Informations</TitrePanneau>
-            <Ligne label="Correspondant" valeur={courrier.correspondant.nom} />
+            <Ligne label={estDepart ? 'Destinataire' : 'Correspondant'} valeur={courrier.correspondant.nom} />
             <Ligne label="Objet" valeur={courrier.objet} />
-            <Grid container spacing={1}>
-              <Grid size={6}><Ligne label="Date du document" valeur={courrier.date_document} /></Grid>
-              <Grid size={6}><Ligne label="Date d'arrivée" valeur={courrier.date_arrivee} /></Grid>
-              <Grid size={6}><Ligne label="Nb pièces" valeur={courrier.nombre_pieces} /></Grid>
-              <Grid size={6}><Ligne label="Délai de réponse" valeur={courrier.delai_reponse} /></Grid>
-            </Grid>
+            {estDepart ? (
+              <>
+                <Grid container spacing={1}>
+                  <Grid size={6}><Ligne label="Structure émettrice" valeur={courrier.structure_emettrice?.sigle} /></Grid>
+                  <Grid size={6}><Ligne label="Date de signature" valeur={courrier.date_signature} /></Grid>
+                  <Grid size={6}><Ligne label="Expédié le" valeur={courrier.expedie_le} /></Grid>
+                  <Grid size={6}><Ligne label="Décharge reçue le" valeur={courrier.decharge_recue_le} /></Grid>
+                </Grid>
+                <Ligne label="Signataire" valeur={courrier.signataire_nom
+                  ? `${courrier.signataire_nom}${courrier.signataire_qualite ? ' — ' + courrier.signataire_qualite : ''}` : '—'} />
+                {courrier.ampliations?.length > 0 && (
+                  <Ligne label="Ampliations" valeur={courrier.ampliations.map((a) => a.nom).join(', ')} />
+                )}
+                {courrier.decharge_commentaire && <Ligne label="Commentaire décharge" valeur={courrier.decharge_commentaire} />}
+                {courrier.courrier_origine && (
+                  <Box sx={{ mb: 1.25 }}>
+                    <Typography sx={{ color: COLORS.muted, fontSize: '0.72rem', textTransform: 'uppercase', fontWeight: 700 }}>Répond à</Typography>
+                    <Box component="button" onClick={() => router.push(`/courrier/${courrier.courrier_origine.id}`)}
+                      sx={{ p: 0, border: 'none', background: 'none', cursor: 'pointer', color: COLORS.blue, fontWeight: 800, fontSize: '0.95rem' }}>
+                      {courrier.courrier_origine.numero_ordre}
+                    </Box>
+                  </Box>
+                )}
+              </>
+            ) : (
+              <Grid container spacing={1}>
+                <Grid size={6}><Ligne label="Date du document" valeur={courrier.date_document} /></Grid>
+                <Grid size={6}><Ligne label="Date d'arrivée" valeur={courrier.date_arrivee} /></Grid>
+                <Grid size={6}><Ligne label="Nb pièces" valeur={courrier.nombre_pieces} /></Grid>
+                <Grid size={6}><Ligne label="Délai de réponse" valeur={courrier.delai_reponse} /></Grid>
+              </Grid>
+            )}
             <Ligne label="Enregistré par" valeur={`${courrier.enregistre_par.nom_complet} (${courrier.enregistre_par.matricule})`} />
             <Typography sx={{ color: COLORS.muted, fontSize: '0.7rem', mt: 1, wordBreak: 'break-all' }}>
-              SHA-256 : {courrier.hash_sha256}
+              SHA-256 : {courrier.hash_sha256 || '—'}
             </Typography>
           </Paper>
 
+          {/* Réponses liées (arrivée) — lot C4 */}
+          {!estDepart && (courrier.reponses_liees || []).length > 0 && (
+            <Paper elevation={0} sx={{ ...CARTE, p: 2.5, mb: 2 }}>
+              <TitrePanneau>Réponses</TitrePanneau>
+              {courrier.reponses_liees.map((r) => (
+                <Box key={r.id} onClick={() => router.push(`/courrier/${r.id}`)}
+                  sx={{ cursor: 'pointer', p: 1, mb: 0.75, borderRadius: 1.5, border: `1px solid ${COLORS.border}`,
+                    '&:hover': { backgroundColor: '#f2f6fb' } }}>
+                  <Typography sx={{ fontWeight: 800, color: COLORS.blue, fontSize: '0.85rem' }}>
+                    {r.reference_complete || r.numero_ordre}
+                  </Typography>
+                  <Typography sx={{ fontSize: '0.75rem', color: COLORS.muted }}>
+                    {r.decharge_recue_le ? `Déchargé le ${r.decharge_recue_le}`
+                      : (r.expedie_le ? `Expédié le ${r.expedie_le}` : 'Enregistré')}
+                  </Typography>
+                </Box>
+              ))}
+            </Paper>
+          )}
+
+          {!estDepart && (
           <Paper elevation={0} sx={{ ...CARTE, p: 2.5, mb: 2 }}>
             <TitrePanneau>Circuit</TitrePanneau>
             {accusable && (
@@ -245,6 +361,7 @@ export default function FicheCourrier() {
               courrier.imputations.map((i) => <NoeudImputation key={i.id} imp={i} niveau={0} />)
             )}
           </Paper>
+          )}
 
           <Paper elevation={0} sx={{ ...CARTE, p: 2.5 }}>
             <TitrePanneau>Chronologie</TitrePanneau>
@@ -270,6 +387,25 @@ export default function FicheCourrier() {
           </Paper>
         </Grid>
       </Grid>
+
+      {/* Dialog décharge (départ) */}
+      <Dialog open={dialogDecharge} onClose={() => setDialogDecharge(false)} maxWidth="xs" fullWidth>
+        <DialogTitle sx={{ fontWeight: 800, color: COLORS.blue }}>Pointer la décharge</DialogTitle>
+        <DialogContent dividers>
+          {errDecharge && <Alert severity="error" sx={{ mb: 2 }}>{errDecharge}</Alert>}
+          <TextField label="Date de la décharge" type="date" value={dechargeDate}
+            onChange={(e) => setDechargeDate(e.target.value)} fullWidth required sx={{ mb: 2 }}
+            slotProps={{ inputLabel: { shrink: true } }} />
+          <TextField label="Commentaire (optionnel)" value={dechargeComm}
+            onChange={(e) => setDechargeComm(e.target.value)} fullWidth multiline minRows={2}
+            slotProps={{ htmlInput: { maxLength: 255 } }} />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDialogDecharge(false)}>Annuler</Button>
+          <Button variant="contained" onClick={pointerDecharge}
+            sx={{ backgroundColor: COLORS.green, fontWeight: 700, '&:hover': { backgroundColor: COLORS.greenDark } }}>Valider</Button>
+        </DialogActions>
+      </Dialog>
 
       {/* Dialog modification */}
       <Dialog open={ouvertModif} onClose={() => setOuvertModif(false)} maxWidth="sm" fullWidth>

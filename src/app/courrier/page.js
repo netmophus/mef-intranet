@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Box, Typography, Paper, Table, TableHead, TableBody, TableRow, TableCell, TableContainer,
-  TextField, MenuItem, Chip, InputAdornment, Pagination, Tooltip, CircularProgress,
+  TextField, MenuItem, Chip, InputAdornment, Pagination, Tooltip, CircularProgress, Button,
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import LockIcon from '@mui/icons-material/Lock';
@@ -33,6 +33,7 @@ export default function ListeCourrier() {
   const { loading, has } = useAuth();
   const autorise = has('courrier.consulter_courrier');
 
+  const [sens, setSens] = useState('ARRIVEE');
   const [q, setQ] = useState('');
   const [qActif, setQActif] = useState('');
   const [statut, setStatut] = useState('');
@@ -53,6 +54,7 @@ export default function ListeCourrier() {
     setErreur('');
     try {
       const p = new URLSearchParams();
+      p.set('sens', sens);
       if (qActif) p.set('q', qActif);
       if (statut) p.set('statut', statut);
       if (correspondant) p.set('correspondant', correspondant);
@@ -64,7 +66,7 @@ export default function ListeCourrier() {
     } finally {
       setChargement(false);
     }
-  }, [qActif, statut, correspondant, page]);
+  }, [sens, qActif, statut, correspondant, page]);
 
   useEffect(() => { if (autorise) charger(); }, [autorise, charger]);
 
@@ -88,7 +90,7 @@ export default function ListeCourrier() {
               <MarkEmailUnreadIcon />
             </Box>
             <Typography component="h1" sx={{ fontWeight: 800, color: COLORS.blue, fontSize: { xs: '1.4rem', md: '1.7rem' } }}>
-              Courrier arrivée
+              {sens === 'DEPART' ? 'Courrier départ' : 'Courrier arrivée'}
             </Typography>
           </Box>
           <Box sx={{ width: 64, height: 4, borderRadius: 2, background: TRICOLOR, mt: 1.2, ml: 0.2 }} />
@@ -97,6 +99,14 @@ export default function ListeCourrier() {
           label={`${data.count} courrier${data.count > 1 ? 's' : ''}`}
           sx={{ backgroundColor: '#fff', border: `1px solid ${COLORS.border}`, fontWeight: 700, color: COLORS.ink, alignSelf: 'center' }}
         />
+      </Box>
+
+      {/* Filtre Arrivée / Départ */}
+      <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
+        {[['ARRIVEE', 'Arrivée'], ['DEPART', 'Départ']].map(([v, l]) => (
+          <Button key={v} onClick={() => { setSens(v); setPage(1); }} variant={sens === v ? 'contained' : 'outlined'}
+            sx={{ fontWeight: 700, borderRadius: 999, ...(sens === v ? { backgroundColor: COLORS.blue } : {}) }}>{l}</Button>
+        ))}
       </Box>
 
       {/* Filtres */}
@@ -131,9 +141,9 @@ export default function ListeCourrier() {
           <TableHead>
             <TableRow sx={{ '& th': { fontWeight: 800, color: COLORS.blueDark, backgroundColor: '#f2f6fb',
               borderBottom: `2px solid ${COLORS.border}`, fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: 0.3 } }}>
-              <TableCell>Numéro</TableCell>
-              <TableCell>Arrivée</TableCell>
-              <TableCell>Correspondant</TableCell>
+              <TableCell>{sens === 'DEPART' ? 'Référence' : 'Numéro'}</TableCell>
+              <TableCell>{sens === 'DEPART' ? 'Signé le' : 'Arrivée'}</TableCell>
+              <TableCell>{sens === 'DEPART' ? 'Destinataire' : 'Correspondant'}</TableCell>
               <TableCell>Objet</TableCell>
               <TableCell>Statut</TableCell>
               <TableCell align="center">Conf.</TableCell>
@@ -150,8 +160,8 @@ export default function ListeCourrier() {
               <TableRow key={c.id} hover onClick={() => router.push(`/courrier/${c.id}`)}
                 sx={{ cursor: 'pointer', '& td': { borderBottom: `1px solid ${COLORS.bg}` },
                   '&:hover td': { backgroundColor: '#f7fafd' } }}>
-                <TableCell sx={{ fontWeight: 800, whiteSpace: 'nowrap', color: COLORS.blue }}>{c.numero_ordre}</TableCell>
-                <TableCell sx={{ whiteSpace: 'nowrap', color: COLORS.muted, fontSize: '0.85rem' }}>{c.date_arrivee}</TableCell>
+                <TableCell sx={{ fontWeight: 800, whiteSpace: 'nowrap', color: COLORS.blue }}>{sens === 'DEPART' ? (c.reference_complete || c.numero_ordre) : c.numero_ordre}</TableCell>
+                <TableCell sx={{ whiteSpace: 'nowrap', color: COLORS.muted, fontSize: '0.85rem' }}>{sens === 'DEPART' ? (c.date_signature || '—') : c.date_arrivee}</TableCell>
                 <TableCell sx={{ fontWeight: 600 }}>{c.correspondant_nom}</TableCell>
                 <TableCell sx={{ maxWidth: 360, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: COLORS.ink }}>
                   {c.objet}
