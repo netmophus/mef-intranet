@@ -14,7 +14,8 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import MarkEmailUnreadIcon from '@mui/icons-material/MarkEmailUnread';
 import IntranetShell from '@/components/IntranetShell';
 import AccesRefuse from '@/components/AccesRefuse';
-import { apiGet, apiPatch, apiPost, apiBase, ApiError } from '@/lib/api';
+import VisionneuseScan from '@/components/VisionneuseScan';
+import { apiGet, apiPatch, apiPost, ApiError } from '@/lib/api';
 import { useAuth } from '@/lib/AuthContext';
 import { COLORS, TRICOLOR } from '@/theme';
 
@@ -207,13 +208,7 @@ export default function FicheCourrier() {
         {/* Visionneuse PDF */}
         <Grid size={{ xs: 12, md: 7 }}>
           <Paper elevation={0} sx={{ ...CARTE, overflow: 'hidden', height: { xs: 420, md: '72vh' } }}>
-            {courrier.a_scan ? (
-              <Box component="iframe" title="Scan du courrier"
-                src={`${apiBase()}/api/v1/courriers/${courrier.id}/scan/`}
-                sx={{ width: '100%', height: '100%', border: 0 }} />
-            ) : (
-              <Box sx={{ p: 4, textAlign: 'center', color: COLORS.muted }}>Aucun scan disponible.</Box>
-            )}
+            <VisionneuseScan courrierId={courrier.id} aScan={courrier.a_scan} />
           </Paper>
         </Grid>
 

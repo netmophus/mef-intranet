@@ -13,7 +13,8 @@ import CheckIcon from '@mui/icons-material/Check';
 import MoveToInboxIcon from '@mui/icons-material/MoveToInbox';
 import IntranetShell from '@/components/IntranetShell';
 import AccesRefuse from '@/components/AccesRefuse';
-import { apiGet, apiPost, apiBase, ApiError } from '@/lib/api';
+import VisionneuseScan from '@/components/VisionneuseScan';
+import { apiGet, apiPost, ApiError } from '@/lib/api';
 import { useAuth } from '@/lib/AuthContext';
 import { badgeDelai } from '@/lib/delais';
 import { COLORS, TRICOLOR } from '@/theme';
@@ -124,8 +125,7 @@ function EcranImputation({ courrier, directions, onValide, onAnnule }) {
     <Grid container spacing={2}>
       <Grid size={{ xs: 12, md: 7 }}>
         <Paper elevation={0} sx={{ border: `1px solid ${COLORS.border}`, borderRadius: 2, overflow: 'hidden', height: { xs: 360, md: '70vh' } }}>
-          <Box component="iframe" title="Scan" src={`${apiBase()}/api/v1/courriers/${courrier.id}/scan/`}
-            sx={{ width: '100%', height: '100%', border: 0 }} />
+          <VisionneuseScan courrierId={courrier.id} aScan />
         </Paper>
       </Grid>
       <Grid size={{ xs: 12, md: 5 }}>
