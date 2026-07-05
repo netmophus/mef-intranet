@@ -144,6 +144,7 @@ export default function ListeCourrier() {
               <TableCell>{sens === 'DEPART' ? 'Référence' : 'Numéro'}</TableCell>
               <TableCell>{sens === 'DEPART' ? 'Signé le' : 'Arrivée'}</TableCell>
               <TableCell>{sens === 'DEPART' ? 'Destinataire' : 'Correspondant'}</TableCell>
+              {sens === 'DEPART' && <TableCell>Structure</TableCell>}
               <TableCell>Objet</TableCell>
               <TableCell>Statut</TableCell>
               <TableCell align="center">Conf.</TableCell>
@@ -151,11 +152,11 @@ export default function ListeCourrier() {
           </TableHead>
           <TableBody>
             {chargement ? (
-              <TableRow><TableCell colSpan={6} align="center" sx={{ py: 5 }}><CircularProgress size={26} /></TableCell></TableRow>
+              <TableRow><TableCell colSpan={sens === 'DEPART' ? 7 : 6} align="center" sx={{ py: 5 }}><CircularProgress size={26} /></TableCell></TableRow>
             ) : erreur ? (
-              <TableRow><TableCell colSpan={6} align="center" sx={{ py: 5, color: COLORS.orange, fontWeight: 600 }}>{erreur}</TableCell></TableRow>
+              <TableRow><TableCell colSpan={sens === 'DEPART' ? 7 : 6} align="center" sx={{ py: 5, color: COLORS.orange, fontWeight: 600 }}>{erreur}</TableCell></TableRow>
             ) : data.results.length === 0 ? (
-              <TableRow><TableCell colSpan={6} align="center" sx={{ py: 5, color: COLORS.muted }}>Aucun courrier.</TableCell></TableRow>
+              <TableRow><TableCell colSpan={sens === 'DEPART' ? 7 : 6} align="center" sx={{ py: 5, color: COLORS.muted }}>Aucun courrier.</TableCell></TableRow>
             ) : data.results.map((c) => (
               <TableRow key={c.id} hover onClick={() => router.push(`/courrier/${c.id}`)}
                 sx={{ cursor: 'pointer', '& td': { borderBottom: `1px solid ${COLORS.bg}` },
@@ -163,6 +164,9 @@ export default function ListeCourrier() {
                 <TableCell sx={{ fontWeight: 800, whiteSpace: 'nowrap', color: COLORS.blue }}>{sens === 'DEPART' ? (c.reference_complete || c.numero_ordre) : c.numero_ordre}</TableCell>
                 <TableCell sx={{ whiteSpace: 'nowrap', color: COLORS.muted, fontSize: '0.85rem' }}>{sens === 'DEPART' ? (c.date_signature || '—') : c.date_arrivee}</TableCell>
                 <TableCell sx={{ fontWeight: 600 }}>{c.correspondant_nom}</TableCell>
+                {sens === 'DEPART' && (
+                  <TableCell sx={{ whiteSpace: 'nowrap', color: COLORS.blue, fontWeight: 700 }}>{c.structure_emettrice || '—'}</TableCell>
+                )}
                 <TableCell sx={{ maxWidth: 360, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: COLORS.ink }}>
                   {c.objet}
                 </TableCell>

@@ -42,8 +42,10 @@ export default function EnregistrerDepart() {
     if (!autorise) return;
     apiGet('/api/v1/directions/').then(setDirections).catch(() => {});
     apiGet('/api/v1/courriers/correspondants/').then(setCorrespondants).catch(() => {});
-    apiGet('/api/v1/courriers/?sens=ARRIVEE&page_size=100')
-      .then((d) => setArrivees((d.results || []).filter((c) => ['IMPUTE', 'EN_TRAITEMENT'].includes(c.statut))))
+    // Toutes les arrivées sauf celles classées sans suite (on peut répondre à une
+    // arrivée déjà traitée : rappel, envoi complémentaire — le backend l'autorise).
+    apiGet('/api/v1/courriers/?sens=ARRIVEE&page_size=300')
+      .then((d) => setArrivees((d.results || []).filter((c) => c.statut !== 'CLASSE')))
       .catch(() => {});
   }, [autorise]);
 
@@ -190,8 +192,9 @@ export default function EnregistrerDepart() {
           </Grid>
           <Grid size={{ xs: 12, sm: 6 }}>
             <Autocomplete options={arrivees} value={f.origine} onChange={(e, v) => maj('origine', v)}
-              getOptionLabel={(o) => `${o.numero_ordre} — ${o.objet}`} isOptionEqualToValue={(o, v) => o.id === v.id}
-              renderInput={(p) => <TextField {...p} label="Répond à (courrier arrivée)" placeholder="Optionnel" />} />
+              getOptionLabel={(o) => `${o.numero_ordre} — ${o.objet}${o.statut_libelle ? ` (${o.statut_libelle})` : ''}`}
+              isOptionEqualToValue={(o, v) => o.id === v.id}
+              renderInput={(p) => <TextField {...p} label="Répond à (courrier arrivée)" placeholder="Optionnel — recherche par numéro/objet" />} />
           </Grid>
         </Grid>
 
